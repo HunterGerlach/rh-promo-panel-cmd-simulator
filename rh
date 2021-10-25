@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# The RH Promotion Panel Command Simulator
+
+# This script was created for the simple purpose of parsing a very specific
+# document and displaying its contents in a very sepcific output pattern.
+# This code likely has many bugs, so use it at your own risk.
+
+FILE=~/Documents/projects/promotion-panel/rh-promo-panel-cmd-simulator/2021Q4.json
+
+CheckIfHelpWanted()
+{
+    # Get the options
+    while getopts ":h" option; do
+        case $option in
+            h) # display Help
+                DisplayHelpContent
+                exit;;
+        esac
+    done
+}
+
+DisplayCommandHelpDescriptions()
+{
+    mapfile -t HELP_ARR < <(jq -r 'keys[]' ${FILE})
+    for i in "${HELP_ARR[@]}"
+    do
+        DESC_KEY=".\"${i}\".description"
+        HELP_DESC=$(jq -r "${DESC_KEY}" ${FILE})
+
+        # Unfortunately, this hack is necessary to achieve desired formatting
+        i="${i}              "
+
+        echo -e "\t${i:0:12}${HELP_DESC}"
+    done
+}
+
+DisplayHelpContent()
+{
+    echo
+    echo "Add description of the script functions here."
+    echo
+    echo "options:"
+    DisplayCommandHelpDescriptions
+    echo
+}
+
+PauseBetweenOutputs()
+{
+    if [[ $i -lt $((ARRAY_LENGTH-1)) ]]; then
+        sleep 1
+    fi
+}
+
+OutputCommandResults()
+{
+    ARRAY_LENGTH=$(jq -r "$KEY | length" ${FILE})
+
+    for i in $(seq 0 $((ARRAY_LENGTH-1)))
+    do
+        echo -e $(jq -r "$KEY[$i]" ${FILE})
+        PauseBetweenOutputs
+    done
+}
+
+SimulateCommandRun()
+{
+    KEY=".\"${1}\""
+
+    if [[ $# -eq 2 ]]; then
+        SUBSTR=$(echo $2 | cut -d'-' -f 2)
+        KEY="${KEY}.\"${SUBSTR}\""
+    else
+        KEY="${KEY}.run"
+
+    fi
+
+    OutputCommandResults
+}
+
+Main()
+{
+    if [[ $# -gt 0 ]]; then
+
+        CheckIfHelpWanted $@
+        
+        SimulateCommandRun $@
+    fi
+}
+
+Main $@
